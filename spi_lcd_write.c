@@ -4,7 +4,6 @@
 #define F_CPU 8000000UL // 8 MHz
 #endif
 
-#define PIN_BACKLIGHT PB1
 #define PIN_DISPLAY_SCE PD7
 #define PIN_DISPLAY_RST PD6
 #define PIN_DISPLAY_DC  PD5
@@ -39,7 +38,7 @@ void lcd_write(uint8_t write_type, char data) {
 int main(void) {
   // Control Pins
   DDRD = (1 << PIN_DISPLAY_SCE) | (1 << PIN_DISPLAY_RST) | (1 << PIN_DISPLAY_DC);
-  DDRB = (1 << PB3) | (1 << PB5) | (1 << PB2) | (1 << PIN_BACKLIGHT);
+  DDRB = (1 << PB3) | (1 << PB5) | (1 << PB2);
   SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0);
 
   // Reset the LCD to a known state

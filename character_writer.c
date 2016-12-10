@@ -28,7 +28,7 @@ int main(void) {
   sei();
 
   lcd_init();
-  backlight_on();
+  // backlight_on();
   clock_init();
 
   while(1);

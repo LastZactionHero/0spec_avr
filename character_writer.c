@@ -1,14 +1,19 @@
+#include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
-#include <stdlib.h> // Reimplement this?
-#include "pins.h"
 #include "backlight.h"
+#include "clock.h"
 #include "lcd.h"
+#include "pins.h"
 #include "text_writer.h"
 
 #ifndef F_CPU
 #define F_CPU 8000000UL // 8 MHz
 #endif
+
+ISR(TIMER0_COMPA_vect) {
+  clock_increment();
+}
 
 int main(void) {
   // Control Pins
@@ -20,10 +25,11 @@ int main(void) {
   PORTD &= ~(1 << PIN_DISPLAY_RST);
   PORTD |= (1 << PIN_DISPLAY_RST);
 
-  lcd_init();
-  write_text("Hello world!");
+  sei();
 
+  lcd_init();
   backlight_on();
+  clock_init();
 
   while(1);
 }

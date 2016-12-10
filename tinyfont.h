@@ -97,4 +97,8 @@ PGM_P const tinyfont_table[] PROGMEM = {TINYFONT_EXCLAIM, TINYFONT_DOUBLE_QUOTE,
 // Font starts at ASCII 0x21 - exclaimation point. No valid characters before this.
 // Control characters like \n are handled explicitly.
 #define TINYFONT_ARR_OFFSET 0x21;
+
+int tinyfont_char_width(char character);
+int tinyfont_char_idx(char character);
+
 #endif

@@ -2,23 +2,13 @@
 #include <avr/pgmspace.h>
 #include <stdlib.h> // Reimplement this?
 #include <string.h> // Reimplement this?
+#include "pins.h"
+#include "lcd.h"
 #include "tinyfont.h"
-
 
 #ifndef F_CPU
 #define F_CPU 8000000UL // 8 MHz
 #endif
-
-#define PIN_DISPLAY_SCE PD7
-#define PIN_DISPLAY_RST PD6
-#define PIN_DISPLAY_DC  PD5
-#define PIN_BACKLIGHT DDB1
-
-#define LCD_COMMAND  0
-#define LCD_DATA     1
-#define LCD_CONTRAST 50 // good values between 40 and 60
-#define LCD_WHITE 0
-#define LCD_BLACK 1
 
 // Message Buffer - Current message written to the screen
 #define MESSAGE_BUFFER_LEN 96
@@ -30,93 +20,9 @@ char message_buffer[MESSAGE_BUFFER_LEN];
 #define TEXT_SPACE_WIDTH 6
 #define TEXT_LETTER_SPACE_WIDTH 2
 
-// Display buffer
-#define LCD_WIDTH 84
-#define LCD_HEIGHT 48
-char display_map[LCD_WIDTH * LCD_HEIGHT / 8];
-
 uint8_t g_text_start_x = 0;
 uint8_t g_text_start_y = 0;
 
-
-// Write command to LCD module
-void lcd_write(uint8_t write_type, char data) {
-  if(write_type == LCD_DATA){
-    // Sending pixel data: set D/C line high
-    PORTD |= (1 << PIN_DISPLAY_DC);
-  } else {
-    // Sending pixel data: set D/C line low
-    PORTD &= ~(1 << PIN_DISPLAY_DC);
-  }
-
-  // Set chip select low
-  PORTD &= ~(1 << PIN_DISPLAY_SCE);
-
-  // Send the data byte
-  SPDR = data;
-
-  // Wait for interrupt to indicate sending has finished
-  while (!(SPSR & (1<<SPIF)));
-
-  // Set chip select high
-  PORTD |= (1 << PIN_DISPLAY_SCE);
-}
-
-void lcd_goto_xy(int x, int y)
-{
-  lcd_write(0, 0x80 | x);  // Column
-  lcd_write(0, 0x40 | y);  // Row
-}
-
-void lcd_update_display()
-{
-  lcd_goto_xy(0, 0);
-
-  uint16_t i = 0;
-  for(i = 0; i < (LCD_WIDTH * LCD_HEIGHT / 8); i++)
-  {
-    lcd_write(LCD_DATA, display_map[i]);
-  }
-}
-
-// This function sets a pixel on display_map to your preferred
-// color. 1=Black, 0= white.
-void lcd_mark_pixel(int x, int y, uint8_t bw)
-{
-  // First, double check that the coordinate is in range.
-  if ((x >= 0) && (x < LCD_WIDTH) && (y >= 0) && (y < LCD_HEIGHT))
-  {
-    char shift = y % 8;
-
-    if (bw) // If black, set the bit.
-      display_map[x + (y/8)*LCD_WIDTH] |= 1<<shift;
-    else   // If white clear the bit.
-      display_map[x + (y/8)*LCD_WIDTH] &= ~(1<<shift);
-  }
-}
-
-// Because I keep forgetting to put bw variable in when setting...
-void lcd_set_pixel(int x, int y)
-{
-  lcd_mark_pixel(x, y, LCD_BLACK); // Call setPixel with bw set to Black
-}
-
-void lcd_clear_pixel(int x, int y)
-{
-  lcd_mark_pixel(x, y, LCD_WHITE); // call setPixel with bw set to white
-}
-
-void clear_display(uint8_t bw){
-  uint16_t i = 0;
-  for (i = 0; i<(LCD_WIDTH * LCD_HEIGHT / 8); i++)
-  {
-    if (bw) {
-      display_map[i] = 0xFF;
-    } else {
-      display_map[i] = 0;
-    }
-  }
-}
 
 int tinyfont_char_idx(char character) {
   return character - TINYFONT_ARR_OFFSET;
@@ -222,7 +128,7 @@ int write_character(char character) {
 void write_message_to_lcd(char *message) {
   strncpy(message_buffer, message, MESSAGE_BUFFER_LEN);
   format_message_buffer(); // Preemptive word wrapping
-  clear_display(LCD_WHITE);
+  lcd_clear_display(LCD_WHITE);
   
   g_text_start_x = 0;
   g_text_start_y = 0;
@@ -279,7 +185,7 @@ int main(void) {
   lcd_write(LCD_COMMAND, 0x80 | LCD_CONTRAST); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
   lcd_write(LCD_COMMAND, 0x20); //Set display mode
 
-  write_message_to_lcd("Hello world!");
+  write_message_to_lcd("Hello x!");
 
   ICR1 = 0x3D08; // Set counter top as 16-Bit
   OCR1A = 0x1E84; // set PWM for 50% duty cycle @ 16bit

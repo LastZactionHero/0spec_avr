@@ -27,6 +27,19 @@ void lcd_write(uint8_t write_type, char data) {
   PORTD |= (1 << PIN_DISPLAY_SCE);
 }
 
+void lcd_init() {
+  // LCD Setup
+  lcd_write(LCD_COMMAND, 0x21); // Tell LCD extended commands follow
+  lcd_write(LCD_COMMAND, 0xB0); // Set LCD Vop (Contrast)
+  lcd_write(LCD_COMMAND, 0x04); // Set Temp coefficent
+  lcd_write(LCD_COMMAND, 0x14); // LCD bias mode 1:48 (try 0x13)
+  lcd_write(LCD_COMMAND, 0x20); //We must send 0x20 before modifying the display control mode
+  lcd_write(LCD_COMMAND, 0x0C); //Set display control, normal mode.
+  lcd_write(LCD_COMMAND, 0x21); //Tell LCD that extended commands follow
+  lcd_write(LCD_COMMAND, 0x80 | LCD_CONTRAST); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
+  lcd_write(LCD_COMMAND, 0x20); //Set display mode  
+}
+
 void lcd_goto_xy(int x, int y)
 {
   lcd_write(0, 0x80 | x);  // Column

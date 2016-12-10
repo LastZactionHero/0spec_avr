@@ -23,18 +23,6 @@ char message_buffer[MESSAGE_BUFFER_LEN];
 uint8_t g_text_start_x = 0;
 uint8_t g_text_start_y = 0;
 
-
-int tinyfont_char_idx(char character) {
-  return character - TINYFONT_ARR_OFFSET;
-}
-
-int tinyfont_char_width(char character) {
-  int font_idx = tinyfont_char_idx(character);
-  char w[1];
-  strncpy_P(w, (PGM_P)pgm_read_word(&(tinyfont_table[font_idx])), 1);
-  return atoi(w);
-}
-
 void format_message_buffer() {
   int msg_x = 0; // Current X position
   int last_space_idx = -1;  // Index of the last space
@@ -80,12 +68,11 @@ int write_character(char character) {
 
   char char_pixels[TEXT_MAX_CHAR_WIDTH * TEXT_LINE_HEIGHT];  // display buffer, maximum 8x8 size of character
   int bit_posn = 0; // index into char_pixels
-  
+
   // Get the display bytes from the font
-  int font_idx = tinyfont_char_idx(character);
   char font_buffer[16];
-  strcpy_P(font_buffer, (char*)pgm_read_word(&(tinyfont_table[font_idx])));
-  
+  tinyfont_char_data(font_buffer, character);
+
   // Loop over the font and map to the character display buffer
   uint8_t char_idx = 0;
   for(char_idx = 0; char_idx < strlen(font_buffer); char_idx++){
@@ -185,7 +172,7 @@ int main(void) {
   lcd_write(LCD_COMMAND, 0x80 | LCD_CONTRAST); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
   lcd_write(LCD_COMMAND, 0x20); //Set display mode
 
-  write_message_to_lcd("Hello x!");
+  write_message_to_lcd("Hello y!");
 
   ICR1 = 0x3D08; // Set counter top as 16-Bit
   OCR1A = 0x1E84; // set PWM for 50% duty cycle @ 16bit

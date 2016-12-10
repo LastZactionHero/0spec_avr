@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+#include <stdlib.h> // Reimplement this?
 #include <string.h> // Reimplement this?
 #include "tinyfont.h"
 
@@ -11,6 +12,7 @@
 #define PIN_DISPLAY_SCE PD7
 #define PIN_DISPLAY_RST PD6
 #define PIN_DISPLAY_DC  PD5
+#define PIN_BACKLIGHT DDB1
 
 #define LCD_COMMAND  0
 #define LCD_DATA     1
@@ -105,7 +107,7 @@ void lcd_clear_pixel(int x, int y)
 }
 
 void clear_display(uint8_t bw){
-  uint8_t i = 0;
+  uint16_t i = 0;
   for (i = 0; i<(LCD_WIDTH * LCD_HEIGHT / 8); i++)
   {
     if (bw) {
@@ -123,7 +125,7 @@ int tinyfont_char_idx(char character) {
 int tinyfont_char_width(char character) {
   int font_idx = tinyfont_char_idx(character);
   char w[1];
-  strncpy_P(w, (char*)pgm_read_word(&(tinyfont_table[font_idx])), 1);
+  strncpy_P(w, (PGM_P)pgm_read_word(&(tinyfont_table[font_idx])), 1);
   return atoi(w);
 }
 
@@ -172,21 +174,21 @@ int write_character(char character) {
 
   char char_pixels[TEXT_MAX_CHAR_WIDTH * TEXT_LINE_HEIGHT];  // display buffer, maximum 8x8 size of character
   int bit_posn = 0; // index into char_pixels
-
+  
   // Get the display bytes from the font
   int font_idx = tinyfont_char_idx(character);
   char font_buffer[16];
   strcpy_P(font_buffer, (char*)pgm_read_word(&(tinyfont_table[font_idx])));
-
+  
   // Loop over the font and map to the character display buffer
   uint8_t char_idx = 0;
   for(char_idx = 0; char_idx < strlen(font_buffer); char_idx++){
     char byte_buff[2]; // one byte at a time (e.g. 'FF')
-
+  
     // Determine the width of the letter
     if(char_idx >= 2){ // skip the first two characters - width and delimiter
       byte_buff[char_idx % 2] = font_buffer[char_idx]; // append to the byte buffer
-
+  
       if(char_idx % 2 == 1){ // full buffer loaded, two characters (one byte)
         unsigned long hex = strtoul(byte_buff, NULL, 16); // convert string buffer to a number
         // identify active pixels in the byte
@@ -213,6 +215,7 @@ int write_character(char character) {
       }
     }
   }
+
   return char_width;
 }
 
@@ -220,10 +223,10 @@ void write_message_to_lcd(char *message) {
   strncpy(message_buffer, message, MESSAGE_BUFFER_LEN);
   format_message_buffer(); // Preemptive word wrapping
   clear_display(LCD_WHITE);
-
+  
   g_text_start_x = 0;
   g_text_start_y = 0;
-
+  
   // Loop over the message buffer
   uint8_t i = 0;
   for(i = 0; i < MESSAGE_BUFFER_LEN; i++){
@@ -233,7 +236,7 @@ void write_message_to_lcd(char *message) {
       g_text_start_x = 0;
       g_text_start_y += TEXT_LINE_HEIGHT;
     }
-
+  
     if(message_buffer[i] == 0){
       break; // all done
     } else if(message_buffer[i] == '\n') {
@@ -249,8 +252,8 @@ void write_message_to_lcd(char *message) {
       g_text_start_x += write_character(message_buffer[i]) + TEXT_LETTER_SPACE_WIDTH;
     }
   }
-
-  update_display();
+  
+  lcd_update_display();
 }
 
 int main(void) {
@@ -258,7 +261,7 @@ int main(void) {
 
   // Control Pins
   DDRD = (1 << PIN_DISPLAY_SCE) | (1 << PIN_DISPLAY_RST) | (1 << PIN_DISPLAY_DC);
-  DDRB = (1 << PB3) | (1 << PB5) | (1 << PB2);
+  DDRB = (1 << PB3) | (1 << PB5) | (1 << PB2) | (1 << PIN_BACKLIGHT);
   SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0);
 
   // Reset the LCD to a known state
@@ -278,5 +281,16 @@ int main(void) {
 
   write_message_to_lcd("Hello world!");
 
+  ICR1 = 0x3D08; // Set counter top as 16-Bit
+  OCR1A = 0x1E84; // set PWM for 50% duty cycle @ 16bit
+  TCCR1A |= (1 << COM1A1)|(1 << COM1B1); // Non-inverting mode
+
+  // Fast-PWM with ICR1 as TOP
+  TCCR1A |= (1 << WGM11);
+  TCCR1B |= (1 << WGM12)|(1 << WGM13);
+
+  //TCCR1B |= (1 << CS10); // No Prescaler
+  TCCR1B |= (1 << CS12)|(1 << CS10); // 1024 Prescaler
+  
   while(1);
 }

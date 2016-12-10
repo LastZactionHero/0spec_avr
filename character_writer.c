@@ -2,6 +2,7 @@
 #include <avr/pgmspace.h>
 #include <stdlib.h> // Reimplement this?
 #include "pins.h"
+#include "backlight.h"
 #include "lcd.h"
 #include "text_writer.h"
 
@@ -10,8 +11,6 @@
 #endif
 
 int main(void) {
-  uint16_t i = 0;
-
   // Control Pins
   DDRD = (1 << PIN_DISPLAY_SCE) | (1 << PIN_DISPLAY_RST) | (1 << PIN_DISPLAY_DC);
   DDRB = (1 << PB3) | (1 << PB5) | (1 << PB2) | (1 << PIN_BACKLIGHT);
@@ -22,18 +21,9 @@ int main(void) {
   PORTD |= (1 << PIN_DISPLAY_RST);
 
   lcd_init();
-  write_text("Hello ay!");
+  write_text("Hello world!");
 
-  ICR1 = 0x3D08; // Set counter top as 16-Bit
-  OCR1A = 0x1E84; // set PWM for 50% duty cycle @ 16bit
-  TCCR1A |= (1 << COM1A1)|(1 << COM1B1); // Non-inverting mode
-
-  // Fast-PWM with ICR1 as TOP
-  TCCR1A |= (1 << WGM11);
-  TCCR1B |= (1 << WGM12)|(1 << WGM13);
-
-  //TCCR1B |= (1 << CS10); // No Prescaler
-  TCCR1B |= (1 << CS12)|(1 << CS10); // 1024 Prescaler
+  backlight_on();
 
   while(1);
 }
